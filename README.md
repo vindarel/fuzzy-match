@@ -1,6 +1,6 @@
 # Fuzzy-match
 
-commit 1: extracted from the Nyxt browser. Original authors: Ambrevar, Vindarel.
+Fuzzy match candidates from an input string.
 
 ~~~lisp
 CL-USER> (fuzzy-match "hl" '("foo" "bar" "hello" "hey!"))
@@ -20,6 +20,11 @@ its result.
 
 To give any objects as candidates, and not only strings, make them
 implement `object-display`, that returns a string representation.
+
+
+# Nyxt origin
+
+This code was extracted from the Nyxt browser. Original authors: Ambrevar, Vindarel.
 
 
 # Licence
