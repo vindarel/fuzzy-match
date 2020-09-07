@@ -20,7 +20,7 @@
 
 (defsystem :fuzzy-match/tests
   :depends-on (:fuzzy-match
-               :prove)
+               :rove)
   :components ((:file "test-fuzzy"))
 
   ;XXX: to finish integrate.
