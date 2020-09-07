@@ -17,3 +17,11 @@
   #.(uiop:read-file-string
      (uiop:subpathname *load-pathname* "README.md"))
   :in-order-to ((test-op (test-op :str.test))))
+
+(defsystem :fuzzy-match/tests
+  :depends-on (:fuzzy-match
+               :prove)
+  :components ((:file "test-fuzzy"))
+
+  ;XXX: to finish integrate.
+  :in-order-to ((test-op (test-op :fuzzy-match/test))))
