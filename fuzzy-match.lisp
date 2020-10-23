@@ -2,7 +2,8 @@
 ;;; Initial authors: Ambrevar, Vindarel.
 
 (defpackage :fuzzy-match
-  (:use :cl))
+  (:use :cl)
+  (:export :fuzzy-match))
 (in-package :fuzzy-match)
 
 (defmethod object-display (obj)

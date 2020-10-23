@@ -7,10 +7,10 @@
 (in-package :fuzzy-match.tests.rove)
 
 ;;; Test on the REPL with
-;;; (rove:run-test 'fuzzy-match)
+;; (rove:run-test 'fuzzy-match)
 ;;;
 ;;; and on the command line:
-;;; rove test-fuzzy.lisp
+;;; rove test-fuzzy.lisp  ;TODO: is Rove working?
 
 ;; Uncomment to run the tests when loading the file (C-c C-k)
 ;; (run-suite *package*)
