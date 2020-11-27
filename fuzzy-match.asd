@@ -16,13 +16,14 @@
   :long-description
   #.(uiop:read-file-string
      (uiop:subpathname *load-pathname* "README.md"))
-  :in-order-to ((test-op (test-op :str.test))))
+  ;; :in-order-to ((test-op (test-op :fuzzy-match/tests)))
+  )
 
-(defsystem :fuzzy-match/tests
-  :depends-on (:fuzzy-match
-               :rove)
-  :components ((:file "test-fuzzy"))
+;; (defsystem :fuzzy-match/tests
+;;   :depends-on (:fuzzy-match
+;;                :rove)
+;;   :components ((:file "test-fuzzy"))
 
-  ;XXX: to finish integrate.
-  :description "Fuzzy-match candidates from a string input. Test package."
-  :in-order-to ((test-op (test-op :fuzzy-match/test))))
+;;   ;XXX: to finish integrate.
+;;   :description "Fuzzy-match candidates from a string input. Test package."
+;;   :in-order-to ((test-op (test-op :fuzzy-match/test))))
