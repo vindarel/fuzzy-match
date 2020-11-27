@@ -24,4 +24,5 @@
   :components ((:file "test-fuzzy"))
 
   ;XXX: to finish integrate.
+  :description "Fuzzy-match candidates from a string input. Test package."
   :in-order-to ((test-op (test-op :fuzzy-match/test))))
