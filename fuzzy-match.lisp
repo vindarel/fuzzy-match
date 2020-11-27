@@ -134,16 +134,15 @@ suggestions; otherwise `object-display' is used."
                           pairs))
                (pairs (keep-exact-matches-in-suggestions input pairs))
                (pairs (sort-suggestions input pairs)))
-          (log:debug "~a"
-                     (let ((limit 100)
-                           (pairs (mapcar (lambda (c)
-                                            (list (first c)
-                                                  (score-suggestion (to-unicode input) (first c))))
-                                          pairs)))
-                       ;; Don't display more than 100 elements to avoid flooding stdout.
-                       (if (< (length pairs) limit)
-                           pairs
-                           (nconc (subseq pairs 0 limit) (list "...")))))
+          (let ((limit 100)
+                (pairs (mapcar (lambda (c)
+                                 (list (first c)
+                                       (score-suggestion (to-unicode input) (first c))))
+                               pairs)))
+            ;; Don't display more than 100 elements to avoid flooding stdout.
+            (if (< (length pairs) limit)
+                pairs
+                (nconc (subseq pairs 0 limit) (list "..."))))
           (mapcar #'second pairs))
         suggestions)))
 
