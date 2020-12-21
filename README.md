@@ -2,7 +2,7 @@
 
 Fuzzy match candidates from an input string.
 
-On [Ultralisp](https://ultralisp.org/).
+On Quicklisp (2020-12) and [Ultralisp](https://ultralisp.org/).
 
 ~~~lisp
 CL-USER> (fuzzy-match "hl" '("foo" "bar" "hello" "hey!"))
