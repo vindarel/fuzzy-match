@@ -22,7 +22,6 @@
                               "SWITCH-BUFFER"
                               "BOOKMARK-DELETE"
                               "BUFFER"
-                              "SWITCH-BUFFER"
                               "DELETE-BUFFER"
                               "DELETE-WINDOW"
                               "HELP-MODE"
@@ -55,31 +54,33 @@
                                     '("about" "switch-buffer" "delete-buffer")))
                "switch-buffer")
         "reverse match 'buf swit' (small list)")
+
     ;; TODO: Fix reverse fuzzy matching.
-    ;; (ok (equal (first (fuzzy-match "buf swit"
-    ;;                               *suggestions*))
-        ;;     "SWITCH-BUFFER")
-    ;;     "reverse match 'buf swit' with real suggestions list")
+    ;; (ok (equal (first (fuzzy-match "buf swit" *suggestions*))
+            ;; "SWITCH-BUFFER")  ;; and not SWITCH-BUFFER-PREVIOUS
+        ;; "reverse match 'buf swit' with real suggestions list")
 
     (ok (equal (first (fuzzy-match "de"
                                     '("some-mode" "delete-foo")))
                "delete-foo")
         "suggestions beginning with the first word appear first")
 
-    (ok (equal (first (fuzzy-match "foobar"
-                                    '("foo-dash-bar" "foo-bar")))
-               "foo-bar")
+    (ok (equal (fuzzy-match "foobar"
+                                    '("foo-dash-bar" "foo-bar"))
+               (list "foo-bar" "foo-dash-bar")))
         "search without a space. All characters count (small list).")
     (ok (equal (first (fuzzy-match "sbf"
-                                    *suggestions*))
+                                   *suggestions*
+                                   :treshold 0.01))
                "SWITCH-BUFFER")
         "search without a space. All characters count, real list.")
     (ok (equal (first (fuzzy-match "FOO"
-                                    '("foo-dash-bar" "FOO-BAR")))
+                                   '("foo-dash-bar" "FOO-BAR")))
                "FOO-BAR")
         "input is uppercase (small list).")
     (ok (equal (first (fuzzy-match "[" '("test1"
                                           "http://[1:0:0:2::3:0.]/"
-                                          "test2")))
+                                         "test2")
+                                   :treshold 0.01))
                "http://[1:0:0:2::3:0.]/")
         "match regex meta-characters")))

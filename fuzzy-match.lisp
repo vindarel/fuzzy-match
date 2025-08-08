@@ -11,6 +11,19 @@
   ;; devel: Learn good value.
   "The score threshold below which candidates are discarded.")
 
+(defparameter *debug* nil
+  "If t, print scores.")
+
+;; yep we might use structures or objects or dicts, but so be it.
+(defun item (plist)
+  (getf plist :item))
+
+(defun input (plist)
+  (getf plist :input))
+
+(defun score (plist)
+  (getf plist :score))
+
 (defun substring-norm (substrings string &key (substring-length 2))
   "Return the norm of SUBSTRINGS with regard to STRING.
 The norm is closer to 1 if
@@ -57,32 +70,37 @@ Only substrings of SUBSTRING-LENGTH characters or more are considered."
 A higher score means the suggestion comes first."
   ;; The Jaccard metric seems to provide much better results than, say,
   ;; Damerau-Levensthein but it's much slower.
-  ;; TODO: Check out fzf for a possibly good scoring algorithm.
+  (assert (stringp suggestion))
   (+ (* 1.0 (mk-string-metrics:norm-damerau-levenshtein suggestion input))
      (* 1.0 (substring-norm (str:split " " input) suggestion))))
 
-(defun sort-candidates (input pairs)
-  "Sort PAIRS, the pair closest to INPUT in the levenshtein distance comes first.
+(defun score-sort-candidates (input pairs)
+  "Score and sort PAIRS, the pair closest to INPUT in the levenshtein distance comes first.
 PAIRS is a list of (search-string real-item)."
   ;; WARNING: mk-string-metrics works on low-level arrays and might not get
   ;; the text encoding right.  We need to make sure the candidates and the
   ;; input are of the same encoding.
-  (setf input (to-unicode input))
-  (dolist (suggestion-pair pairs)
-    (setf (first suggestion-pair) (to-unicode (first suggestion-pair))))
-  (flet ((score-suggestion (pair)
-           (cons (score-suggestion input (first pair)) pair))
-         (sort-suggestion (triplet1 triplet2)
-           (> (first triplet1)
-              (first triplet2)))
-         (triplet-to-pair (triplet)
-           (rest triplet)))
-    (mapcar #'triplet-to-pair
-            (sort (mapcar #'score-suggestion pairs) #'sort-suggestion))))
+  (let ((input (to-unicode input))
+        (candidates (mapcar (lambda (elt)
+                              (list :input (to-unicode (input elt))
+                                    :item (item elt)))
+                            pairs)))
+    (flet ((score-pair (pair)
+             (list :score (score-suggestion input (input pair))
+                   :input (input pair)
+                   :item (item pair)))
+           (sort-suggestion (triplet1 triplet2)
+             (> (getf triplet1 :score)
+                (getf triplet2 :score))))
+      (stable-sort (mapcar #'score-pair candidates)
+                   #'sort-suggestion))))
 
+;; devel: add type declarations.
 (defun find-exactly-matching-substrings (input candidates &key (substring-length 2))
   "Return the list of input substrings that match at least one suggestion.
 The substrings must be SUBSTRING-LENGTH characters long or more."
+  (assert (stringp input))
+  (assert (stringp (first candidates)))
   (let ((input-strings (delete-if (lambda (s) (< (length s) substring-length))
                                   (str:split " " input :omit-nulls t))))
     (when input-strings
@@ -95,38 +113,37 @@ The substrings must be SUBSTRING-LENGTH characters long or more."
        :test #'string=))))
 
 (defun keep-exact-matches-in-candidates (input pairs)
-  "Destructively filter out non-exact matches from candidates.
-If any input substring matches exactly (but not necessarily a whole word),
+  "Filter out non-exact matches from candidates.
+If any input substring (split by whitespace) matches exactly (but not necessarily a whole word),
 then all candidates that are not exactly matched by at least one substring are removed."
-  (let* ((exactly-matching-substrings (find-exactly-matching-substrings
-                                       input
-                                       (mapcar #'first pairs))))
+  (let ((exactly-matching-substrings (find-exactly-matching-substrings
+                                      input
+                                      (mapcar #'input pairs))))
     (if exactly-matching-substrings
-        (setf pairs
-              (delete-if (lambda (suggestion-pair)
-                           (not (loop for i in exactly-matching-substrings
-                                      always (search i (first suggestion-pair)))))
-                         pairs))
+        (remove-if (lambda (item)
+                     (not (loop for i in exactly-matching-substrings
+                                always (search i (input item)))))
+                   pairs)
         pairs)))
 
 (declaim (inline filter-by-treshold))
-(defun filter-by-treshold (pairs &key (treshold *treshold*))
-  "Keep pairs (string, number) only if number is >= than TRESHOLD.
-  If TRESHOLD isn't a number, return all pairs."
+(defun filter-by-treshold (items &key (treshold *treshold*))
+  "Keep items (plist with :string and :score keys) only if score is >= than TRESHOLD.
+  If TRESHOLD isn't a number, return all items."
   (cond
     ((numberp treshold)
-     (loop :for pair :in pairs
-           :if (>= (second pair) treshold)
-             :collect pair))
+     (loop :for item :in items
+           :if (>= (score item) treshold)
+             :collect item))
     (t
-     pairs)))
+     items)))
 
 (defun fuzzy-match (input candidates &key (key #'identity) (treshold *treshold*))
   "From the user input and a list of candidates, return a filtered list of
 candidates that have all the input words in them, and sort this list to have the
 'most relevant' first.
 
-KEY is an accessor function.
+KEY is a function to get the candidates' string representation. It will be funcall'ed.
 
 TRESHOLD, a float between 0 and 1, is the minimal score for a matching result. If a match scores below it, it is discarded.
 
@@ -134,32 +151,46 @@ The match is case-sensitive if INPUT contains at least one uppercase character."
   ;; To sort by the display value, we store all the candidates in a
   ;; (display-value real-value) list or pairs.
   (let ((pairs (mapcar (lambda (elt)
-                         (list (funcall key elt)
-                               elt))
+                         (list :input (funcall key elt)
+                               :item elt))
                        candidates)))
 
     ;; slight cleanup.
     (setf input (str:replace-all " " " " input))  ;; unbreakable whitespace
 
+    ;; Prefer to work with all downcased candidate strings,
+    ;; except if the input contains one uppercase character.
+    ;; DEVEL: have a parameter?
+    (when (str:downcasep input)
+      (setf pairs
+            (mapcar (lambda (elt)
+                      (setf (getf elt :input)
+                            (string-downcase (getf elt :input)))
+                      elt)
+                    pairs)))
+
     (if (str:emptyp input)
-        ;; empty input, same candidates.
         candidates
-        (let* ((pairs (if (str:downcasep input)
-                          ;; Prefer to work with all downcased strings.
-                          (mapcar (lambda (elt)
-                                    (list (string-downcase (first elt))
-                                          (second elt)))
-                                  pairs)
-                          pairs))
-               (pairs (keep-exact-matches-in-candidates input pairs))
-               ;; sort
-               (pairs (sort-candidates input pairs))
-               ;; score
-               (score-pairs (mapcar (lambda (c)
-                                      (list (first c)
-                                            (score-suggestion (to-unicode input) (first c))))
-                                    pairs))
+        (let* ((pairs (keep-exact-matches-in-candidates input pairs))
+               ;; score and sort
+               (score-items (score-sort-candidates input pairs))
                ;; filter low quality results
-               (score-pairs (filter-by-treshold score-pairs :treshold treshold)))
-          (mapcar #'first score-pairs)
-          ))))
+               ;; devel: have adaptive treshold on the result length?
+               (score-items (filter-by-treshold score-items :treshold treshold)))
+          (when *debug*
+            (print score-items))
+          (mapcar #'item score-items)))))
+
+#+(or)
+;; test with objects, other than list of strings.
+(progn
+  (defstruct candidate
+    (string)
+    (stuff))
+
+  (defparameter *objects*
+    (list (make-candidate :string "project-switch")
+          (make-candidate :string "bananas")))
+
+  (fuzzy-match "proj ws" *objects* :key #'candidate-string)
+  )
