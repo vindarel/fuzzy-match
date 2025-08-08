@@ -7,9 +7,9 @@
            :*treshold*))
 (in-package :fuzzy-match)
 
-(defvar *threshold* 0.4
+(defvar *treshold* 0.4
   ;; devel: Learn good value.
-  "The score threshold under which suggestions are eleminated.")
+  "The score threshold below which suggestions are discarded.")
 
 (defmethod object-display (obj)
   "Like `print-object', but for fuzzy-match."
@@ -118,6 +118,16 @@ then all suggestions that are not exactly matched by at least one substring are 
                          suggestion-pairs))
         suggestion-pairs)))
 
+(declaim (inline filter-by-treshold))
+(defun filter-by-treshold (pairs &key (treshold *treshold*))
+  (cond
+    ((numberp treshold)
+     (loop :for pair :in pairs
+           :if (>= (second pair) treshold)
+             :collect pair))
+    (t
+     pairs)))
+
 (defun fuzzy-match (input suggestions &key suggestions-display (treshold *threshold*))
   "From the user input and a list of suggestions, return a filtered list of
 suggestions that have all the input words in them, and sort this list to have the
@@ -147,11 +157,7 @@ suggestions; otherwise `object-display' is used."
                                       (score-suggestion (to-unicode input) (first c))))
                               pairs))
                ;; filter low quality results
-               (pairs (loop :for pair :in pairs
-                            :if (>= (second pair) treshold)
-                            :collect pair))
-
-               )
+               (pairs (filter-by-treshold pairs :treshold treshold)))
           (mapcar #'first pairs)
           )
         ;; empty input, same suggestions, no pairs with scores.
