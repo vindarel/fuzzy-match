@@ -4,7 +4,7 @@
   :author "Nyxt project, Ambrevar, Vindarel"
   :maintainer "vindarel <vindarel@mailz.org>"
   :license "MIT"
-  :version "0.1"
+  :version "0.2"
   :homepage "https://github.com/vindarel/fuzzy-match"
   :bug-tracker "https://github.com/vindarel/fuzzy-match/issues"
   :source-control (:git "git@github.com:vindarel/fuzzy-match.git")
