@@ -65,14 +65,14 @@ Only substrings of SUBSTRING-LENGTH characters or more are considered."
 
 ;; IDEA: Make score functions customizable, e.g. for global history.
 
-(defun score-suggestion (input suggestion)
-  "Return a SUGGESTION's score for INPUT.
-A higher score means the suggestion comes first."
+(defun score-candidate (input candidate)
+  "Return a CANDIDATE's score for INPUT.
+A higher score means the candidate comes first."
   ;; The Jaccard metric seems to provide much better results than, say,
   ;; Damerau-Levensthein but it's much slower.
-  (assert (stringp suggestion))
-  (+ (* 1.0 (mk-string-metrics:norm-damerau-levenshtein suggestion input))
-     (* 1.0 (substring-norm (str:split " " input) suggestion))))
+  (assert (stringp candidate))
+  (+ (* 1.0 (mk-string-metrics:norm-damerau-levenshtein candidate input))
+     (* 1.0 (substring-norm (str:split " " input) candidate))))
 
 (defun score-sort-candidates (input pairs)
   "Score and sort PAIRS, the pair closest to INPUT in the levenshtein distance comes first.
@@ -86,18 +86,18 @@ PAIRS is a list of (search-string real-item)."
                                     :item (item elt)))
                             pairs)))
     (flet ((score-pair (pair)
-             (list :score (score-suggestion input (input pair))
+             (list :score (score-candidate input (input pair))
                    :input (input pair)
                    :item (item pair)))
-           (sort-suggestion (triplet1 triplet2)
+           (sort-candidate (triplet1 triplet2)
              (> (getf triplet1 :score)
                 (getf triplet2 :score))))
       (stable-sort (mapcar #'score-pair candidates)
-                   #'sort-suggestion))))
+                   #'sort-candidate))))
 
 ;; devel: add type declarations.
 (defun find-exactly-matching-substrings (input candidates &key (substring-length 2))
-  "Return the list of input substrings that match at least one suggestion.
+  "Return the list of input substrings that match at least one candidate.
 The substrings must be SUBSTRING-LENGTH characters long or more."
   (assert (stringp input))
   (assert (stringp (first candidates)))
@@ -105,10 +105,10 @@ The substrings must be SUBSTRING-LENGTH characters long or more."
                                   (str:split " " input :omit-nulls t))))
     (when input-strings
       (delete-duplicates
-       (loop for suggestion in candidates
+       (loop for candidate in candidates
              append (remove-if
                      (lambda (i)
-                       (not (search i suggestion)))
+                       (not (search i candidate)))
                      input-strings))
        :test #'string=))))
 
