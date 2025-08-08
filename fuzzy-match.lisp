@@ -3,8 +3,13 @@
 
 (defpackage :fuzzy-match
   (:use :cl)
-  (:export :fuzzy-match))
+  (:export :fuzzy-match
+           :*treshold*))
 (in-package :fuzzy-match)
+
+(defvar *threshold* 0.4
+  ;; devel: Learn good value.
+  "The score threshold under which suggestions are eleminated.")
 
 (defmethod object-display (obj)
   "Like `print-object', but for fuzzy-match."
@@ -49,6 +54,8 @@ Only substrings of SUBSTRING-LENGTH characters or more are considered."
       (coerce input `(simple-array character (,(length input))))
       input))
 
+;; IDEA: Make score functions customizable, e.g. for global history.
+
 (defun score-suggestion (input suggestion)
   "Return a SUGGESTION's score for INPUT.
 A higher score means the suggestion comes first."
@@ -57,9 +64,6 @@ A higher score means the suggestion comes first."
   ;; TODO: Check out fzf for a possibly good scoring algorithm.
   (+ (* 1.0 (mk-string-metrics:norm-damerau-levenshtein suggestion input))
      (* 1.0 (substring-norm (str:split " " input) suggestion))))
-
-(defvar score-threshold 0.0             ; TODO: Learn good value and enable low-score filtering below.
-  "The threshold under which suggestions are eleminated.")
 
 (defun sort-suggestions (input suggestion-pairs)
   "Sort SUGGESTION-PAIRS, the pair closest to INPUT in the levenshtein distance comes first.
@@ -114,11 +118,13 @@ then all suggestions that are not exactly matched by at least one substring are 
                          suggestion-pairs))
         suggestion-pairs)))
 
-;; (export-always 'fuzzy-match)
-(defun fuzzy-match (input suggestions &key suggestions-display) ; TODO: Make score functions customizable, e.g. for global history.
+(defun fuzzy-match (input suggestions &key suggestions-display (treshold *threshold*))
   "From the user input and a list of suggestions, return a filtered list of
 suggestions that have all the input words in them, and sort this list to have the
 'most relevant' first.
+
+TRESHOLD, a float between 0 and 1, is the minimal score for a matching result. If a match scores below it, it is discarded.
+
 The match is case-sensitive if INPUT contains at least one uppercase character.
 SUGGESTIONS-DISPLAY can be used to pass the pre-computed display strings of the
 suggestions; otherwise `object-display' is used."
@@ -133,20 +139,20 @@ suggestions; otherwise `object-display' is used."
                           (mapcar (lambda (p) (list (string-downcase (first p)) (second p))) pairs)
                           pairs))
                (pairs (keep-exact-matches-in-suggestions input pairs))
-               (pairs (sort-suggestions input pairs)))
-          (let ((limit 100)
-                (pairs (mapcar (lambda (c)
-                                 (list (first c)
-                                       (score-suggestion (to-unicode input) (first c))))
-                               pairs)))
-            ;; Don't display more than 100 elements to avoid flooding stdout.
-            (if (< (length pairs) limit)
-                pairs
-                (nconc (subseq pairs 0 limit) (list "..."))))
-          (mapcar #'second pairs))
-        suggestions)))
+               ;; sort
+               (pairs (sort-suggestions input pairs))
+               ;; score
+               (pairs (mapcar (lambda (c)
+                                (list (first c)
+                                      (score-suggestion (to-unicode input) (first c))))
+                              pairs))
+               ;; filter low quality results
+               (pairs (loop :for pair :in pairs
+                            :if (>= (second pair) treshold)
+                            :collect pair))
 
-;; (export-always 'file-suggestion-function)
-(defun file-suggestion-function (input files)
-  "Fuzzy-match this list of files."
-  (fuzzy-match input files))
+               )
+          (mapcar #'first pairs)
+          )
+        ;; empty input, same suggestions, no pairs with scores.
+        suggestions)))
