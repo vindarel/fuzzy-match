@@ -11,10 +11,6 @@
   ;; devel: Learn good value.
   "The score threshold below which suggestions are discarded.")
 
-(defmethod object-display (obj)
-  "Like `print-object', but for fuzzy-match."
-  (format nil "~A" obj))
-
 (defun substring-norm (substrings string &key (substring-length 2))
   "Return the norm of SUBSTRINGS with regard to STRING.
 The norm is closer to 1 if
@@ -128,25 +124,21 @@ then all suggestions that are not exactly matched by at least one substring are 
     (t
      pairs)))
 
-(defun fuzzy-match (input suggestions &key suggestions-display (treshold *threshold*))
+(defun fuzzy-match (input suggestions &key (key #'identity) (treshold *treshold*))
   "From the user input and a list of suggestions, return a filtered list of
 suggestions that have all the input words in them, and sort this list to have the
 'most relevant' first.
 
+KEY is an accessor function.
 TRESHOLD, a float between 0 and 1, is the minimal score for a matching result. If a match scores below it, it is discarded.
 
-The match is case-sensitive if INPUT contains at least one uppercase character.
-SUGGESTIONS-DISPLAY can be used to pass the pre-computed display strings of the
-suggestions; otherwise `object-display' is used."
+The match is case-sensitive if INPUT contains at least one uppercase character."
   ;; To sort by the display value, we store all the suggestions in a
   ;; (display-value real-value) list or pairs.
-  (let ((pairs (if suggestions-display
-                   (mapcar #'list suggestions-display suggestions)
-                   (mapcar (lambda (c) (list (object-display c) c)) suggestions))))
-    (if (not (str:empty? input))
-        (let* ((input (str:replace-all " " " " input))
-               (pairs (if (str:downcasep input)
-                          (mapcar (lambda (p) (list (string-downcase (first p)) (second p))) pairs)
+  (let ((pairs (mapcar (lambda (elt)
+                         (list (funcall key elt)
+                               elt))
+                       suggestions)))
                           pairs))
                (pairs (keep-exact-matches-in-suggestions input pairs))
                ;; sort
