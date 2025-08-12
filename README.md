@@ -50,6 +50,12 @@ its result.
 
 This code was extracted from the Nyxt browser. Original authors: Ambrevar, Vindarel.
 
+## Other projects using this
+
+We know of:
+
+- [cl-autocorrect](https://github.com/moneylobster/cl-autocorrect)
+- Lem editor (soon©)
 
 # Licence
 
