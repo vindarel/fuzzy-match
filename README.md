@@ -40,9 +40,9 @@ its result.
 
 - 0.2 <2025-08-08>:
   - use a `:key` parameter to work with compound objects instead of `:suggestions-display`.
-  - use a score treshold
-  - regression: with no adaptative treshold so far, a short input string might not get results. E.g. searching for "bf" might not return "buffer-switch".
-    - or in `(fuzzy-match "[" '("http://[1:0:0:2::3:0.]/" "foo") :treshold 0.01)` we need a low treshold.
+  - use a score threshold
+  - regression: with no adaptative threshold so far, a short input string might not get results. E.g. searching for "bf" might not return "buffer-switch".
+    - or in `(fuzzy-match "[" '("http://[1:0:0:2::3:0.]/" "foo") :threshold 0.01)` we need a low threshold.
 - 0.1: initial
 
 

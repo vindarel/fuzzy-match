@@ -4,10 +4,10 @@
 (defpackage :fuzzy-match
   (:use :cl)
   (:export :fuzzy-match
-           :*treshold*))
+           :*threshold*))
 (in-package :fuzzy-match)
 
-(defvar *treshold* 0.4
+(defvar *threshold* 0.4
   ;; devel: Learn good value.
   "The score threshold below which candidates are discarded.")
 
@@ -126,30 +126,33 @@ then all candidates that are not exactly matched by at least one substring are r
                    pairs)
         pairs)))
 
-(declaim (inline filter-by-treshold))
-(defun filter-by-treshold (items &key (treshold *treshold*))
-  "Keep items (plist with :string and :score keys) only if score is >= than TRESHOLD.
-  If TRESHOLD isn't a number, return all items."
+(declaim (inline filter-by-threshold))
+(defun filter-by-threshold (items &key (threshold *threshold*))
+  "Keep items (plist with :string and :score keys) only if score is >= than THRESHOLD.
+  If THRESHOLD isn't a number, return all items."
   (cond
-    ((numberp treshold)
+    ((numberp threshold)
      (loop :for item :in items
-           :if (>= (score item) treshold)
+           :if (>= (score item) threshold)
              :collect item))
     (t
      items)))
 
-(defun fuzzy-match (input candidates &key (key #'identity) (treshold *treshold*))
+(defun fuzzy-match (input candidates &key (key #'identity) (threshold *threshold*))
   "From the user input and a list of candidates, return a filtered list of
 candidates that have all the input words in them, and sort this list to have the
 'most relevant' first.
 
 KEY is a function to get the candidates' string representation. It will be funcall'ed.
 
-TRESHOLD, a float between 0 and 1, is the minimal score for a matching result. If a match scores below it, it is discarded.
+THRESHOLD, a float between 0 and 1, is the minimal score for a matching result. If a match scores below it, it is discarded.
 
 The match is case-sensitive if INPUT contains at least one uppercase character."
   ;; To sort by the display value, we store all the candidates in a
   ;; (display-value real-value) list or pairs.
+  (unless key
+    ;; when callers use :key nil
+    (setf key #'identity))
   (let ((pairs (mapcar (lambda (elt)
                          (list :input (funcall key elt)
                                :item elt))
@@ -170,13 +173,13 @@ The match is case-sensitive if INPUT contains at least one uppercase character."
                     pairs)))
 
     (if (str:emptyp input)
-        candidates
+         candidates
         (let* ((pairs (keep-exact-matches-in-candidates input pairs))
                ;; score and sort
                (score-items (score-sort-candidates input pairs))
                ;; filter low quality results
-               ;; devel: have adaptive treshold on the result length?
-               (score-items (filter-by-treshold score-items :treshold treshold)))
+               ;; devel: have adaptive threshold on the result length?
+               (score-items (filter-by-threshold score-items :threshold threshold)))
           (when *debug*
             (print score-items))
           (mapcar #'item score-items)))))
